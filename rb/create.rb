@@ -9,7 +9,7 @@ require 'optparse'
 # Parse the command line
 usage_help = "Usage: #{$PROGRAM_NAME} [options] <file to timestamp> <username> <password>"
 options = {
-  host: 'https://www.timestampit.com',
+  host: 'https://beta.timestampit.com',
   verbose: false
 }
 OptionParser.new do |parser|

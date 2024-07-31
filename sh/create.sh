@@ -19,7 +19,7 @@ fi
 # Get the hash of the file, trim off any other output like the filename
 digest=$(shasum -a 256 "$filename_to_timestamp" | cut -f 1 -d ' ')
 
-host="http://127.0.0.1:3001"
+host="https://beta.timestampit.com"
 endpoint="/create"
 encoded_args="digest=$digest&algorithm=sha256"
 

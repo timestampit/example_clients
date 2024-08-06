@@ -17,7 +17,7 @@ parser.add_argument("filename", help="The file to create a Trusted Timestamp for
 parser.add_argument("username", help="timestampit.com username")
 parser.add_argument("password", help="timestampit.com password")
 parser.add_argument(
-    "-H", "--host", help="API host", default="https://beta.timestampit.com"
+    "-H", "--host", help="API host", default="https://timestampit.com"
 )
 parser.add_argument(
     "-o", "--output-filename", help="The filename where the proof is stored"

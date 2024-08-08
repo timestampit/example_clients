@@ -38,7 +38,7 @@ end
 
 # Validate Trusted Timestamp file is in correct format
 tt_content = File.read(options[:trusted_timestamp_file])
-unless tt_content =~ /\A1.0\|\w{12}\|20\d\d-\d\d-\d\dT\d\d:\d\d:\d\dZ\|\w+\|\w+\|http\S+\|\n[^|]+\z/m
+unless tt_content =~ /\A1.0\|\w{12}\|20\d\d-\d\d-\d\dT\d\d:\d\d:\d\dZ\|\w+\|\w+\|http[^|]+\|[^|]*\n[^|]+\z/m
   puts "Error: #{options[:trusted_timestamp_file]} does not appear to be a valid trusted timestamp file"
   exit(1)
 end

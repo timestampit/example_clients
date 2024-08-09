@@ -32,18 +32,16 @@ echo "$expected_hash_digest $file_to_verify" | sha256sum --check
 
 # Prepare files for openssl which is used to perform the actual verification
 # Create distinct files for the message and the signature
-tmp_dir=$(mktemp -d -t $(basename $0))
-message_file="$tmp_dir/$(basename "$proof_file").message"
-signature_file="$tmp_dir/$(basename "$proof_file").sig"
+tmp_dir=$(mktemp -d)
+message_file="$tmp_dir/message"
+signature_file="$tmp_dir/sig"
+key_filename="$tmp_dir/key"
 # message is the first line of the Trusted Timestamp **without a newline**
 head -1 "$proof_file" | tr -d "\n" > "$message_file"
 # signature is the second line of the Trusted Timestamp, decoded from base64 to raw bytes
-tail -1 "$proof_file" | tr -d "\n" | base64 -D > "$signature_file"
+head -2 "$proof_file" | tail -1 | tr -d "\n" | base64 -D > "$signature_file"
 # Ensure the public/verification key file is in place
-key_filename="$tmp_dir/$key_id.pem"
-if ! test -f "$key_filename"; then
-  curl -s -o "$key_filename" "$key_url"
-fi
+curl -s -o "$key_filename" "$key_url"
 
 # Perform the openssl verification
 openssl pkeyutl \

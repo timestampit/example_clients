@@ -1,0 +1,79 @@
+# This workflow creates a Trusted Timestamp for a specific git commit sha.
+# It creates a hash of the git repo at the specific git commit sha.
+# It then uses timestampit.com to create a Trusted Timestamp using that git commit sha
+
+name: Create Signed Timestamp
+
+on: workflow_dispatch
+
+env:
+  TIMESTAMPS_BRANCH: trusted_timestamps
+  TIMESTAMPIT_USERNAME: public
+  TIMESTAMPIT_PASSWORD: publicpublic
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout default branch of repo
+        uses: actions/checkout@v4
+        with:
+          path: code_to_timestamp
+
+      - name: hash default branch of repo
+        id: hash-repo
+        working-directory: code_to_timestamp
+        run: |
+          echo "REPO_HASH=$(git ls-tree --full-tree -r --name-only HEAD | sort | xargs shasum -a 256 | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: create timestamps branch if it does not exist
+        working-directory: code_to_timestamp
+        run: |
+          if ! git ls-remote --exit-code --heads origin refs/heads/$TIMESTAMPS_BRANCH > /dev/null; then
+            git switch --orphan $TIMESTAMPS_BRANCH
+
+            echo "# Trusted Timestamps" > Readme.md
+            git add Readme.md
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Creating $TIMESTAMPS_BRANCH branch"
+            git push origin $TIMESTAMPS_BRANCH
+          fi
+
+      - name: checkout timestamps branch of repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TIMESTAMPS_BRANCH }}
+          path: timestamps
+
+      - name: Create trusted timestamp
+        env:
+          REPO_HASH: ${{ steps.hash-repo.outputs.REPO_HASH }}
+          EXT_JSON: ${{ steps.construct-ext.outputs.EXT_JSON }}
+        working-directory: timestamps
+        run: |
+          timestamp_filename="$GITHUB_SHA.trusted_timestamp"
+          ext_json="{\"repo\": \"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY\", \"sha\": \"$GITHUB_SHA\"}"
+
+          curl \
+            --data-urlencode algorithm=sha256 \
+            --data-urlencode digest=$REPO_HASH \
+            --data-urlencode ext="$ext_json" \
+            --user $TIMESTAMPIT_USERNAME:$TIMESTAMPIT_PASSWORD \
+            -o "$timestamp_filename" \
+            https://timestampit.com/create
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$timestamp_filename"
+          git commit -m "Add trusted timestamp for sha $GITHUB_SHA"
+          git push origin $TIMESTAMPS_BRANCH

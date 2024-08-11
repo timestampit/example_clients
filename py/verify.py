@@ -52,23 +52,14 @@ if not actual_digest == tt_digest:
     exit(2)
 
 # Retrieve the needed key
-key_id = tt_key_url.split("/")[-1]
-key_cache_path = Path("tmp") / "keys" / (key_id + ".raw")
-if key_cache_path.is_file():
-    if args.verbose:
-        print("Using cached key: " + str(key_cache_path))
-else:
-    if args.verbose:
-        print("Retrieving key: " + tt_key_url)
-    key_response = requests.get(
-        tt_key_url, headers={"Accept": "application/octet-stream"}
-    )
-    if args.verbose:
-        print("Writing key: " + str(key_cache_path))
-    key_cache_path.write_bytes(key_response.content)
+if args.verbose:
+    print("Retrieving key: " + tt_key_url)
+key_response = requests.get(
+    tt_key_url, headers={"Accept": "application/octet-stream"}
+)
 
 # Verify the authenticity of the trusted timestamp
-vk = VerifyKey(key_cache_path.read_bytes())
+vk = VerifyKey(key_response.content)
 try:
     vk.verify(bytes(tt_message, "utf-8"), b64decode(tt_signature))
 except BadSignatureError:

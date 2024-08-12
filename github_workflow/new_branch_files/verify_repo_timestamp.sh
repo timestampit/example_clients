@@ -66,9 +66,9 @@ echo $tmp_dir
 message_file="$tmp_dir/message"
 signature_file="$tmp_dir/sig"
 key_file="$tmp_dir/key"
-echo -n $trusted_timestamp_data > "$message_file"
+echo -n "$trusted_timestamp_data" > "$message_file"
 signature=$(head -2 "$repo_timestamp_file" | tail -1 | tr -d "\n" | base64 -D)
-echo -n $signature > "$signature_file"
+echo -n "$signature" > "$signature_file"
 curl -s -o "$key_file" "$key_url"
 
 # Perform the verification using openssl

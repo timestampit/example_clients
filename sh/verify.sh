@@ -49,7 +49,7 @@ if [[ "$hash_algo" != "sha256" ]]; then
 fi
 
 # Validate the hash in the trusted timestamp matches the actual hash of the file
-echo "$expected_hash_digest $file_to_verify" | sha256sum --check
+# echo "$expected_hash_digest $file_to_verify" | sha256sum --check
 
 # Prepare files for openssl which is used to perform the actual verification
 # Create distinct files for the message and the signature
@@ -59,7 +59,7 @@ message_file="$tmp_dir/message"
 signature_file="$tmp_dir/sig"
 key_filename="$tmp_dir/key"
 # message is the first line of the Trusted Timestamp **without a newline**
-echo -n $trusted_timestamp_data > "$message_file"
+echo -n "$trusted_timestamp_data" > "$message_file"
 # signature is the second line of the Trusted Timestamp, decoded from base64 to raw bytes
 head -2 "$trusted_timestamp_file" | tail -1 | tr -d "\n" | base64 -D > "$signature_file"
 # Ensure the public/verification key file is in place

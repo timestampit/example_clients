@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Stop immediately if any command errors
 set -e
@@ -9,23 +9,44 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 file_to_verify=$1
-proof_file=$2
+trusted_timestamp_file=$2
 
 # Validate the arguments
 if ! test -f "$file_to_verify"; then
   echo "Error: No such file: $file_to_verify"
   exit 1
 fi
-if ! test -f "$proof_file"; then
-  echo "Error: No such file: $proof_file"
+if ! test -f "$trusted_timestamp_file"; then
+  echo "Error: No such file: $trusted_timestamp_file"
+  exit 1
+fi
+
+# split the trusted timestamp into first and second lines (message and signature)
+trusted_timestamp_data=$(head -1 "$trusted_timestamp_file" | tr -d "\n")
+
+# ensure the trusted timestamp file starts with 1.0|
+if [[ $trusted_timestamp_data != 1.0\|*  ]]; then
+  echo "Error: $trusted_timestamp_file does not appear to be a TimestampIt! Trusted Timestamp version 1.0 file"
+  exit 1
+fi
+
+# ensure the trusted timestamp file first line has 6 | characters (7 fields)
+if [[ 6 -ne $(echo $trusted_timestamp_data | tr -cd '|' | wc -c) ]]; then
+  echo "Error: $trusted_timestamp_file does not have exactly 6 | characters on the first line, indicating this is not a valid TimestampIt! Trusted Timestamp version 1.0 file"
   exit 1
 fi
 
 # Extract the needed fields from the Trusted Timestamp message (the first line)
-hash_algo=$(head -1 "$proof_file" | cut -d "|" -f "4")
-expected_hash_digest=$(head -1 "$proof_file" | cut -d "|" -f "5")
-key_url=$(head -1 "$proof_file" | cut -d "|" -f "6")
+timestamp=$(echo $trusted_timestamp_data | cut -d "|" -f "3")
+hash_algo=$(echo $trusted_timestamp_data | cut -d "|" -f "4")
+expected_hash_digest=$(echo $trusted_timestamp_data | cut -d "|" -f "5")
+key_url=$(echo $trusted_timestamp_data | cut -d "|" -f "6")
 key_id=$(echo "$key_url" | rev | cut -d '/' -f 1 | rev)
+
+if [[ "$hash_algo" != "sha256" ]]; then
+  echo "This script only supports timestamps made with sha256 hashes"
+  exit 1
+fi
 
 # Validate the hash in the trusted timestamp matches the actual hash of the file
 echo "$expected_hash_digest $file_to_verify" | sha256sum --check
@@ -33,13 +54,14 @@ echo "$expected_hash_digest $file_to_verify" | sha256sum --check
 # Prepare files for openssl which is used to perform the actual verification
 # Create distinct files for the message and the signature
 tmp_dir=$(mktemp -d)
+echo $tmp_dir
 message_file="$tmp_dir/message"
 signature_file="$tmp_dir/sig"
 key_filename="$tmp_dir/key"
 # message is the first line of the Trusted Timestamp **without a newline**
-head -1 "$proof_file" | tr -d "\n" > "$message_file"
+echo -n $trusted_timestamp_data > "$message_file"
 # signature is the second line of the Trusted Timestamp, decoded from base64 to raw bytes
-head -2 "$proof_file" | tail -1 | tr -d "\n" | base64 -D > "$signature_file"
+head -2 "$trusted_timestamp_file" | tail -1 | tr -d "\n" | base64 -D > "$signature_file"
 # Ensure the public/verification key file is in place
 curl -s -o "$key_filename" "$key_url"
 
@@ -51,7 +73,6 @@ openssl pkeyutl \
   -sigfile "$signature_file"
 
 echo "All verifications successful"
-timestamp=$(head -1 "$proof_file" | cut -d "|" -f "3")
 echo "$file_to_verify was created no later than $timestamp"
 
 rm -rf $tmp_dir

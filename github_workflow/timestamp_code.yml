@@ -1,6 +1,5 @@
-# This workflow creates a Trusted Timestamp for a specific git commit sha.
-# It creates a hash of the git repo at the specific git commit sha.
-# It then uses timestampit.com to create a Trusted Timestamp using that git commit sha
+# This workflow creates a signed Trusted Timestamp for a specific git commit sha.
+# This Trusted Timestamp proves the date this code was in this git repo at.
 
 name: Create Signed Timestamp
 

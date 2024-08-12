@@ -34,7 +34,13 @@ To verify a given Trusted Timestamp, run the included verification script like s
 `./verify_repo_timestamp.sh <trusted timestamp filename>`.
 
 If the Trusted Timestamp verifies successfully, you will see output like:
-``.
+```
+All verifications successful
+All files in this repo at commit a2a611052c4f689ae30bb9eb8c86f59c6653466d were created no later than 2024-08-12T04:04:21Z
+```
 
 If it fails to verify, you will see output like:
-``.
+`Repo digests do not match`
+or
+`Signature Verification Failure`.
+

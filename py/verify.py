@@ -57,6 +57,14 @@ if args.verbose:
 key_response = requests.get(
     tt_key_url, headers={"Accept": "application/octet-stream"}
 )
+if not key_response.status_code == 200:
+  print("Warn: Failed to retrieve verification key from " + tt_key_url + ". Attempting to retrieve from fallback repo...")
+  key_id = tt_key_url.split('/')[-1]
+  alt_url = "https://raw.githubusercontent.com/timestampit/keychain/main/keys/raw/" + key_id + ".raw"
+  key_response = requests.get(alt_url)
+  if not key_response.status_code == 200:
+    print("Error: Failed to retrieve from verification key")
+    exit(3)
 
 # Verify the authenticity of the trusted timestamp
 vk = VerifyKey(key_response.content)

@@ -57,12 +57,25 @@ actual_digest = case tt_algo.to_sym
 
 # Verify the hash digests match
 unless actual_digest == tt_digest
-  print "FAIL: hash digest mismatch: #{actual_digest} != #{tt_digest}"
+  puts "FAIL: hash digest mismatch: #{actual_digest} != #{tt_digest}"
   exit(1)
 end
 
+# get the verification key.
+# Try the key url from the trusted timestamp, fallback to the github backup repo if that fails
+key_response = Net::HTTP.get_response(URI(tt_key_url))
+pem_key = if key_response.code == "200"
+            key_response.body
+          else
+            puts "WARN: Failed to get key from #{tt_key_url}, attempting to retrieve from backup location"
+            key_id = tt_key_url.split('/').last
+            alt_url = "https://raw.githubusercontent.com/timestampit/keychain/main/keys/pem/#{key_id}.pem"
+            alt_response = Net::HTTP.get_response(URI(alt_url))
+            raise "Unable to retrieve verification key" unless alt_response.code == "200"
+            alt_response.body
+          end
+
 # Initialize the key using the pem key retrieved from the location in the Trusted Timestamp
-pem_key = Net::HTTP.get(URI(tt_key_url))
 openssl_pkey = OpenSSL::PKey.read(pem_key)
 # convert the signature from Base64 to bytes
 binary_signature = Base64.strict_decode64(tt_signature)

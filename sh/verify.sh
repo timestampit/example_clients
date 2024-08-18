@@ -41,7 +41,6 @@ timestamp=$(echo $trusted_timestamp_data | cut -d "|" -f "3")
 hash_algo=$(echo $trusted_timestamp_data | cut -d "|" -f "4")
 expected_hash_digest=$(echo $trusted_timestamp_data | cut -d "|" -f "5")
 key_url=$(echo $trusted_timestamp_data | cut -d "|" -f "6")
-key_id=$(echo "$key_url" | rev | cut -d '/' -f 1 | rev)
 
 if [[ "$hash_algo" != "sha256" ]]; then
   echo "This script only supports timestamps made with sha256 hashes"
@@ -61,8 +60,19 @@ key_filename="$tmp_dir/key"
 echo -n "$trusted_timestamp_data" > "$message_file"
 # signature is the second line of the Trusted Timestamp, decoded from base64 to raw bytes
 head -2 "$trusted_timestamp_file" | tail -1 | tr -d "\n" | base64 -D > "$signature_file"
-# Ensure the public/verification key file is in place
-curl -s -o "$key_filename" "$key_url"
+# Attempt to get the key from the key url within the Trusted Timestamp.
+# If that fails, get it from the GitHub replica repo
+if ! curl --fail --silent --output "$key_filename" "$key_url"; then
+  # get the key id from the key url
+  # key id is kleybzu2afwz for https://timestampit.com/key/kleybzu2afwz
+  key_id=$(echo "$key_url" | rev | cut -d '/' -f 1 | rev)
+  github_backup_key_url="https://raw.githubusercontent.com/timestampit/keychain/main/keys/pem/$key_id.pem"
+  echo "Failed to get verification key at $key_url. Attempting to get it from backup repo: $github_backup_key_url"
+  if ! curl --fail --silent --output "$key_filename" "$github_backup_key_url"; then
+    echo "ERROR: Failed to acquire verification key from either $key_url or $github_backup_key_url"
+    exit 1
+  fi
+fi
 
 # Perform the openssl verification
 openssl pkeyutl \
